@@ -14,10 +14,6 @@ from ray.rllib.utils.error import UnsupportedSpaceException
 from ray.rllib.evaluation.tf_policy_graph import TFPolicyGraph
 
 
-Q_SCOPE = "q_func"
-Q_TARGET_SCOPE = "target_q_func"
-
-
 class QNetwork(object):
     def __init__(self, model, num_actions, dueling=False, hiddens=[256]):
         with tf.variable_scope("action_value"):
@@ -77,16 +73,15 @@ class QLoss(object):
             importance_weights * _huber_loss(self.td_error))
 
 
-class DQNPolicyGraph(TFPolicyGraph):
+class ImpalaPolicyGraph(TFPolicyGraph):
     def __init__(self, observation_space, action_space, config):
-        config = dict(ray.rllib.agents.dqn.dqn.DEFAULT_CONFIG, **config)
+        config = dict(ray.rllib.agents.impala.impala.DEFAULT_CONFIG, **config)
         if not isinstance(action_space, Discrete):
             raise UnsupportedSpaceException(
-                "Action space {} is not supported for DQN.".format(
+                "Action space {} is not supported for Impala.".format(
                     action_space))
 
         self.config = config
-        self.cur_epsilon = 1.0
         num_actions = action_space.n
 
         def _build_q_network(obs):
@@ -180,7 +175,11 @@ class DQNPolicyGraph(TFPolicyGraph):
         self.sess.run(tf.global_variables_initializer())
 
     def optimizer(self):
-        return tf.train.AdamOptimizer(learning_rate=self.config["lr"])
+        return tf.train.RMSPropOptimizer(
+                   self.config["lr"],
+                   self.config["decay"],
+                   self.config["momentum"],
+                   self.config["epsilon"])
 
     def gradients(self, optimizer):
         if self.config["grad_norm_clipping"] is not None:

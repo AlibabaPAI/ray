@@ -59,8 +59,14 @@ DEFAULT_CONFIG = with_common_config({
     "compress_observations": True,
 
     # === Optimization ===
-    # Learning rate for adam optimizer
-    "lr": 5e-4,
+    # Learning rate for rmsprop optimizer
+    "lr": 0.00048,
+    # RMSProp optimizer decay
+    "decay": 0.99,
+    # RMSProp momentum
+    "momentum": 0.0,
+    # RMSProp epsilon
+    "epsilon": 0.1,
     # If not None, clip gradients during optimization at this value
     "grad_norm_clipping": 40,
     # How many steps of the model to sample before learning starts.
@@ -74,21 +80,16 @@ DEFAULT_CONFIG = with_common_config({
 
     # === Parallelism ===
     # Whether to use a GPU for local optimization.
-    "gpu": False,
-    # Number of workers for collecting samples with. This only makes sense
-    # to increase if your environment is particularly slow to sample, or if
-    # you"re using the Async or Ape-X optimizers.
-    "num_workers": 0,
+    "gpu": True,
+    # Number of workers for collecting samples with.
+    # Number of actors.
+    "num_workers": 4,
     # Whether to allocate GPUs for workers (if > 0).
     "num_gpus_per_worker": 0,
     # Whether to allocate CPUs for workers (if > 0).
     "num_cpus_per_worker": 1,
     # Optimizer class to use.
     "optimizer_class": "ImpalaOptimizer",
-    # Whether to use a distribution of epsilons across workers for exploration.
-    "per_worker_exploration": False,
-    # Whether to compute priorities on workers.
-    "worker_side_prioritization": False,
 })
 
 
