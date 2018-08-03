@@ -15,9 +15,8 @@ from ray.tune.trial import Resources
 
 
 OPTIMIZER_SHARED_CONFIGS = [
-    "buffer_size", "prioritized_replay", "prioritized_replay_alpha",
-    "prioritized_replay_beta", "prioritized_replay_eps", "sample_batch_size",
-    "train_batch_size", "learning_starts", "clip_rewards"]
+    "buffer_size", "sample_batch_size",
+    "train_batch_size", "clip_rewards"]
 
 DEFAULT_CONFIG = with_common_config({
     # === Model ===

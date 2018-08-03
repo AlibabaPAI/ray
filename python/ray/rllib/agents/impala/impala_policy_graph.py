@@ -14,6 +14,9 @@ from ray.rllib.utils.error import UnsupportedSpaceException
 from ray.rllib.evaluation.tf_policy_graph import TFPolicyGraph
 
 
+MODEL_SCOPE = "model_func"
+
+
 class QNetwork(object):
     def __init__(self, model, num_actions, dueling=False, hiddens=[256]):
         with tf.variable_scope("action_value"):
@@ -84,10 +87,11 @@ class ImpalaPolicyGraph(TFPolicyGraph):
         self.config = config
         num_actions = action_space.n
 
-        def _build_q_network(obs):
-            return QNetwork(
+        def _build_shallow_network(obs):
+            return ShallowNetwork(
                 ModelCatalog.get_model(obs, 1, config["model"]),
                 num_actions, config["dueling"], config["hiddens"]).value
+
 
         # Action inputs
         self.stochastic = tf.placeholder(tf.bool, (), name="stochastic")
