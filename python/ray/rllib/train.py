@@ -74,6 +74,15 @@ def create_parser(parser_creator=None):
     return parser
 
 
+# register opensim environment
+from osim.env import ProstheticsEnv
+from ray.tune.registry import register_env
+
+def env_creator(env_config):
+    return ProstheticsEnv(False)
+register_env("prosthetics", env_creator)
+
+
 def run(args, parser):
     if args.config_file:
         with open(args.config_file) as f:
