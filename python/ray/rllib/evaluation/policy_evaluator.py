@@ -9,7 +9,7 @@ import tensorflow as tf
 import ray
 from ray.rllib.models import ModelCatalog
 from ray.rllib.env.async_vector_env import AsyncVectorEnv
-from ray.rllib.env.atari_wrappers import wrap_deepmind, is_atari
+from ray.rllib.env.atari_wrappers import wrap_deepmind, is_atari, wrap_opensim
 from ray.rllib.env.env_context import EnvContext
 from ray.rllib.env.serving_env import ServingEnv
 from ray.rllib.env.vector_env import VectorEnv
@@ -185,6 +185,10 @@ class PolicyEvaluator(EvaluatorInterface):
 
             def wrap(env):
                 return wrap_deepmind(env, dim=model_config.get("dim", 84))
+        elif hasattr(self.env, "unwrapped"):
+            print("**************Hacking Opensim for NIPS2018**************")
+            def wrap(env):
+                return wrap_opensim(env)
         else:
 
             def wrap(env):

@@ -220,3 +220,32 @@ def wrap_deepmind(env, dim=84):
     # env = ClipRewardEnv(env)  # reward clipping is handled by policy eval
     env = FrameStack(env, 4)
     return env
+
+
+class WalkingEnv(gym.Wrapper):
+    def __init__(self, env, skip=4):
+        """
+        add 1 to original reward for each timestep except for the terminal one
+        repeat an action for 4 timesteps
+        """
+        gym.Wrapper.__init__(self, env)
+        self._skip = skip
+
+    def step(self, ac):
+        total_reward = .0
+        done = None
+        for i in range(self._skip):
+            obs, reward, done, info = self.env.step(ac)
+            total_reward += reward
+            if done:
+                break
+
+        return obs, total_reward if done else total_reward+1.0, done, info
+
+    def reset(self, **kwargs):
+        return self.env.reset(**kwargs)
+
+
+def wrap_opensim(env):
+    env = WalkingEnv(env)
+    return env
