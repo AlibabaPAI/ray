@@ -19,16 +19,16 @@ prosthetics-apex-ddpg:
         # Exploration
         schedule_max_timesteps: 1000000
         exploration_fraction: 0.1
-        exploration_final_eps: 0.02
+        exploration_final_eps: 0.01
         noise_scale: 0.1
         per_worker_exploration: True
         worker_side_prioritization: False
 
         # Model
-        actor_hiddens: [128, 64]
-        actor_hidden_activation: relu
-        critic_hiddens: [128, 64]
-        critic_hidden_activation: relu
+        actor_hiddens: [256, 128]
+        actor_hidden_activation: selu
+        critic_hiddens: [256, 128]
+        critic_hidden_activation: selu
  
         # Optimization
         n_step: 3
