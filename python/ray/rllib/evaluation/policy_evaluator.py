@@ -3,6 +3,8 @@ from __future__ import division
 from __future__ import print_function
 
 import gym
+# for nips2018
+from osim.env import ProstheticsEnv
 import pickle
 import tensorflow as tf
 
@@ -195,7 +197,7 @@ class PolicyEvaluator(EvaluatorInterface):
                 if monitor_path:
                     env = _monitor(env, monitor_path)
                 return env
-        elif hasattr(self.env, "unwrapped"):
+        elif isinstance(self.env, ProstheticsEnv):
             print("**************Hacking Opensim for NIPS2018**************")
             def wrap(env):
                 return wrap_opensim(env)
