@@ -83,7 +83,7 @@ def relative_dict_to_list(observation):
                    'iliopsoas_l', 'iliopsoas_r', 'rect_fem_l', 'rect_fem_r',
                    'soleus_l', 'tib_ant_l', 'vasti_l', 'vasti_r']:
         res.append(observation['muscles'][muscle]['activation'])
-        res.append(observation['muscles'][muscle]['fiber_force']/5000.0)
+        #res.append(observation['muscles'][muscle]['fiber_force']/5000.0)
         res.append(observation['muscles'][muscle]['fiber_length'])
         res.append(observation['muscles'][muscle]['fiber_velocity'])
 
@@ -93,12 +93,24 @@ def relative_dict_to_list(observation):
 def main():
     env = ProstheticsEnv(False)
 
+    action_dim = np.prod(np.array(env.action_space.shape))
+    noise_process = np.zeros(action_dim)
+    exploration_theta = .15
+    exploration_mu = .0
+    exploration_sigma = .2
+
     start_mmt = time.time()
     obs = env.reset(False)
     c = penalty(obs)
     obs = relative_dict_to_list(obs)
+    print(len(obs))
     for _ in range(50):
-        obs, rwd, done, info  = env.step(env.action_space.sample(), False)
+        act = env.action_space.sample()
+        noise_process = exploration_theta*(exploration_mu - noise_process) + exploration_sigma*np.random.randn(action_dim)
+        print(noise_process)
+        act += noise_process
+
+        obs, rwd, done, info  = env.step(act, False)
         c = penalty(obs)
         obs = relative_dict_to_list(obs)
         if done:

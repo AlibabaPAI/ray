@@ -295,12 +295,7 @@ class WalkingEnv(gym.Wrapper):
         repeat an action for 4 timesteps
         """
         gym.Wrapper.__init__(self, env)
-        self.observation_space.shape = (325,)
-        #self.observation_space = spaces.Box(
-        #    low=.0,
-        #    high=.0,
-        #    shape=(325,),
-        #    dtype=env.observation_space.dtype)
+        self.observation_space.shape = (306,)
         self._skip = skip
 
     def _penalty(self, observation):
@@ -380,7 +375,7 @@ class WalkingEnv(gym.Wrapper):
                        'iliopsoas_l', 'iliopsoas_r', 'rect_fem_l', 'rect_fem_r',
                        'soleus_l', 'tib_ant_l', 'vasti_l', 'vasti_r']:
             res.append(observation['muscles'][muscle]['activation'])
-            res.append(observation['muscles'][muscle]['fiber_force']/5000.0)
+            #res.append(observation['muscles'][muscle]['fiber_force']/5000.0)
             res.append(observation['muscles'][muscle]['fiber_length'])
             res.append(observation['muscles'][muscle]['fiber_velocity'])
 
@@ -391,11 +386,12 @@ class WalkingEnv(gym.Wrapper):
         done = None
         for i in range(self._skip):
             obs, reward, done, info = self.env.step(ac, False)
-            total_reward += reward-self._penalty(obs)
+            #total_reward += reward-self._penalty(obs)
+            total_reward += (.0 if done else 1.0) - self._penalty(obs)
             if done:
                 break
 
-        return self._relative_dict_to_list(obs), total_reward if done else total_reward+1.0, done, info
+        return self._relative_dict_to_list(obs), total_reward, done, info
 
     def reset(self, **kwargs):
         return self._relative_dict_to_list(self.env.reset(project=False, **kwargs))
