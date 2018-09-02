@@ -300,18 +300,21 @@ class WalkingEnv(gym.Wrapper):
 
     def _penalty(self, observation):
         x_head_pelvis = observation['body_pos']['head'][0]-observation['body_pos']['pelvis'][0]
-        accept_x1 = -0.25
-        accept_x2 = 0.25
+        accept_x1 = -0.3
+        accept_x2 = 0.3
         pe = .0
 
         if x_head_pelvis < accept_x1:
             pe = -2.* (x_head_pelvis-accept_x1)
+            done = True
         elif x_head_pelvis < accept_x2:
             pe = 0.0
+            done = False
         else:
             pe = -2.* (accept_x2 - x_head_pelvis)
+            done = True
 
-        return pe
+        return pe, done
 
     def _relative_dict_to_list(self, observation):
         res = []
@@ -386,8 +389,9 @@ class WalkingEnv(gym.Wrapper):
         done = None
         for i in range(self._skip):
             obs, reward, done, info = self.env.step(ac, False)
-            #total_reward += reward-self._penalty(obs)
-            total_reward += (.0 if done else 1.0) - self._penalty(obs)
+            penalty, strong_done = self._penalty(obs)
+            done = done if done else strong_done
+            total_reward += (.0 if done else 1.0) - penalty
             if done:
                 break
 
