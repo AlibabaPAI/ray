@@ -391,7 +391,7 @@ class WalkingEnv(gym.Wrapper):
             obs, reward, done, info = self.env.step(ac, False)
             penalty, strong_done = self._penalty(obs)
             done = done if done else strong_done
-            total_reward += (.0 if done else 1.0) - penalty
+            total_reward += (reward if done else reward+1.0) - penalty
             if done:
                 break
 
