@@ -20,7 +20,7 @@ prosthetics-apex-ddpg:
         schedule_max_timesteps: 1000000
         exploration_fraction: 0.1
         exploration_final_eps: 0.02
-        noise_scale: 0.5
+        noise_scale: 0.25
         per_worker_exploration: True
         worker_side_prioritization: False
 

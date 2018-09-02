@@ -312,7 +312,7 @@ class WalkingEnv(gym.Wrapper):
             done = False
         else:
             pe = -2.* (accept_x2 - x_head_pelvis)
-            done = True
+            done = False
 
         return pe, done
 
