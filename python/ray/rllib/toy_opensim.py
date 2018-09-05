@@ -6,6 +6,17 @@ from osim.env import ProstheticsEnv
 
 
 def penalty(observation):
+    print(observation['body_pos']['head'][0])
+    print(observation['body_pos']['pelvis'][0])
+
+    print(observation['body_pos']['head'][1])
+    print(observation['body_pos']['pelvis'][1])
+
+    print(observation['body_pos']['head'][2])
+    print(observation['body_pos']['pelvis'][2])
+
+    while True:
+        pass
     x_head_pelvis = observation['body_pos']['head'][0]-observation['body_pos']['pelvis'][0]
     accept_x1 = -0.25
     accept_x2 = 0.25
@@ -20,6 +31,15 @@ def penalty(observation):
 
     return pe
 
+def bonus(observation):
+
+    if observation['body_pos']['head'][1] <= 1.546:
+        return .0
+
+    pelvis_v = observation['body_vel']['pelvis'][0]
+    lv = observation['body_vel']['toes_l'][0]
+    rv = observation['body_vel']['pros_foot_r'][0]
+    return min(max(.0, max(lv, rv)-pelvis_v), 1.0)
 
 def relative_dict_to_list(observation):
     res = []
@@ -107,11 +127,13 @@ def main():
     for _ in range(50):
         act = env.action_space.sample()
         noise_process = exploration_theta*(exploration_mu - noise_process) + exploration_sigma*np.random.randn(action_dim)
-        print(noise_process)
+        #print(noise_process)
         act += noise_process
 
         obs, rwd, done, info  = env.step(act, False)
         c = penalty(obs)
+        b = bonus(obs)
+        print(b)
         obs = relative_dict_to_list(obs)
         if done:
             obs = env.reset(False)

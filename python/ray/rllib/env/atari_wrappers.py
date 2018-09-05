@@ -300,19 +300,32 @@ class WalkingEnv(gym.Wrapper):
 
     def _penalty(self, observation):
         x_head_pelvis = observation['body_pos']['head'][0]-observation['body_pos']['pelvis'][0]
-        accept_x1 = -0.3
-        accept_x2 = 0.3
-        pe = .0
 
+        # height from pelvis to head is around 0.62
+        # consider 0.62 / sqrt(2)
+        accept_x1 = -0.43
+        accept_x2 = 0.43
         if x_head_pelvis < accept_x1:
-            pe = -2.* (x_head_pelvis-accept_x1)
+            pe = 1.0
             done = True
         elif x_head_pelvis < accept_x2:
             pe = 0.0
             done = False
         else:
-            pe = -2.* (accept_x2 - x_head_pelvis)
-            done = False
+            pe = 1.0
+            done = True
+
+        z_head_pelvis = observation['body_pos']['head'][2]-observation['body_pos']['pelvis'][2]
+        accept_z1 = -0.3
+        accept_z2 = 0.3
+        if z_head_pelvis < accept_z1:
+            pe += 2.0
+            done = True
+        elif z_head_pelvis < accept_z2:
+            pass
+        else:
+            pe += 2.0
+            done = True
 
         return pe, done
 
