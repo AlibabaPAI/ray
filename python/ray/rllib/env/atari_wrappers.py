@@ -302,32 +302,39 @@ class WalkingEnv(gym.Wrapper):
         x_head_pelvis = observation['body_pos']['head'][0]-observation['body_pos']['pelvis'][0]
 
         # height from pelvis to head is around 0.62
-        # consider 0.62 / sqrt(2)
-        accept_x1 = -0.43
-        accept_x2 = 0.43
+        # consider 0.62 * cos(60) first
+        # consider 0.62 / sqrt(2) later
+        accept_x1 = -0.31
+        accept_x2 = 0.31
         if x_head_pelvis < accept_x1:
-            pe = 1.0
+            pe = 5.0
             done = True
         elif x_head_pelvis < accept_x2:
             pe = 0.0
             done = False
         else:
             pe = 1.0
-            done = True
+            done = False
 
         z_head_pelvis = observation['body_pos']['head'][2]-observation['body_pos']['pelvis'][2]
-        accept_z1 = -0.3
-        accept_z2 = 0.3
+        accept_z1 = -0.31
+        accept_z2 = 0.31
         if z_head_pelvis < accept_z1:
-            pe += 2.0
+            pe += 5.0
             done = True
         elif z_head_pelvis < accept_z2:
             pass
         else:
-            pe += 2.0
+            pe += 5.0
             done = True
 
         return pe, done
+
+    def _bonus(self, observation):
+        pelvis_v = observation['body_vel']['pelvis'][0]
+        lv = observation['body_vel']['toes_l'][0]
+        rv = observation['body_vel']['pros_foot_r'][0]
+        return min(max(.0, max(lv, rv)-pelvis_v), 1.0)
 
     def _relative_dict_to_list(self, observation):
         res = []
@@ -403,8 +410,9 @@ class WalkingEnv(gym.Wrapper):
         for i in range(self._skip):
             obs, reward, done, info = self.env.step(ac, False)
             penalty, strong_done = self._penalty(obs)
+            b = self._bonus(obs)
             done = done if done else strong_done
-            total_reward += (reward if done else reward+1.0) - penalty
+            total_reward += (reward if done else reward+1.0) - penalty + b
             if done:
                 break
 
