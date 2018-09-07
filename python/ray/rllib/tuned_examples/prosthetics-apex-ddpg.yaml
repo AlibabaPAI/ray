@@ -2,7 +2,7 @@ prosthetics-apex-ddpg:
     env: prosthetics
     run: APEX_DDPG
     stop:
-        episode_reward_mean: 750
+        episode_reward_mean: 500
     checkpoint_freq: 20
     checkpoint_at_end: True
     local_dir: /gruntdata/app_data/jones.wz/rl/nips2018/
@@ -13,7 +13,7 @@ prosthetics-apex-ddpg:
 
         # Misc
         timesteps_per_iteration: 5000
-        num_workers: 80
+        num_workers: 85
         gpu: True
         min_iter_time_s: 30
 
@@ -21,14 +21,17 @@ prosthetics-apex-ddpg:
         schedule_max_timesteps: 1000000
         exploration_fraction: 0.1
         exploration_final_eps: 0.02
-        noise_scale: 1.0
+        noise_scale: 2.5
+        exploration_theta: 0.15
+        exploration_sigma: 0.3
         per_worker_exploration: True
         worker_side_prioritization: False
 
         # Model
         model:
-            fcnet_hiddens: []
-        actor_hiddens: [256, 128]
+            fcnet_hiddens: [256]
+            fcnet_activation: relu
+        actor_hiddens: [128, 64]
         actor_hidden_activation: relu
         critic_hiddens: [256, 128]
         critic_hidden_activation: relu
