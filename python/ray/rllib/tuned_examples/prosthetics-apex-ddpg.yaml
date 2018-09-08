@@ -3,13 +3,14 @@ prosthetics-apex-ddpg:
     run: APEX_DDPG
     stop:
         episode_reward_mean: 500
-    checkpoint_freq: 20
+    checkpoint_freq: 50
     checkpoint_at_end: True
     local_dir: /gruntdata/app_data/jones.wz/rl/nips2018/
     config:
         # problem setting
         clip_rewards: False
         horizon: 75
+        gamma: 0.95
 
         # Misc
         timesteps_per_iteration: 5000
@@ -31,13 +32,13 @@ prosthetics-apex-ddpg:
         model:
             fcnet_hiddens: [256]
             fcnet_activation: relu
-        actor_hiddens: [128, 64]
+        actor_hiddens: [128]
         actor_hidden_activation: relu
-        critic_hiddens: [256, 128]
+        critic_hiddens: [128]
         critic_hidden_activation: relu
  
         # Optimization
-        n_step: 3
+        n_step: 1
         target_network_update_freq: 500000
         tau: 1.0
         use_huber: False
@@ -45,7 +46,7 @@ prosthetics-apex-ddpg:
         train_batch_size: 256
         sample_batch_size: 50
         max_weight_sync_delay: 200
-        learning_starts: 40000
+        learning_starts: 50000
 
         # Replay buffer
-        buffer_size: 1000000
+        buffer_size: 2000000

@@ -6,17 +6,6 @@ from osim.env import ProstheticsEnv
 
 
 def penalty(observation):
-    print(observation['body_pos']['head'][0])
-    print(observation['body_pos']['pelvis'][0])
-
-    print(observation['body_pos']['head'][1])
-    print(observation['body_pos']['pelvis'][1])
-
-    print(observation['body_pos']['head'][2])
-    print(observation['body_pos']['pelvis'][2])
-
-    while True:
-        pass
     x_head_pelvis = observation['body_pos']['head'][0]-observation['body_pos']['pelvis'][0]
     accept_x1 = -0.25
     accept_x2 = 0.25
@@ -47,12 +36,12 @@ def relative_dict_to_list(observation):
     pelvs = {
         'body_pos': observation['body_pos']['pelvis'],
         'body_vel': observation['body_vel']['pelvis'],
-        'body_acc': list(map(lambda v: v/100.0, observation['body_acc']['pelvis']))
+        #'body_acc': list(map(lambda v: v/100.0, observation['body_acc']['pelvis']))
     }
 
     res += pelvs['body_pos']
     res += pelvs['body_vel']
-    res += pelvs['body_acc']
+    #res += pelvs['body_acc']
 
     # Body Observations
     for info_type in ['body_pos', 'body_vel']:
@@ -61,10 +50,10 @@ def relative_dict_to_list(observation):
                           'torso', 'pros_foot_r', 'pros_tibia_r']:
             res += list(map(operator.sub, observation[info_type][body_part], pelvs[info_type]))
 
-    for body_part in ['calcn_l', 'talus_l', 'tibia_l', 'toes_l',
-                      'femur_l', 'femur_r', 'head',
-                      'torso', 'pros_foot_r', 'pros_tibia_r']:
-        res += list(map(lambda a,b: a/100.0-b, observation[info_type][body_part], pelvs['body_acc']))
+    #for body_part in ['calcn_l', 'talus_l', 'tibia_l', 'toes_l',
+    #                  'femur_l', 'femur_r', 'head',
+    #                  'torso', 'pros_foot_r', 'pros_tibia_r']:
+    #    res += list(map(lambda a,b: a/100.0-b, observation['body_acc'][body_part], pelvs['body_acc']))
 
     for info_type in ['body_pos_rot', 'body_vel_rot']:
         for body_part in ['calcn_l', 'talus_l', 'tibia_l', 'toes_l',
@@ -72,18 +61,18 @@ def relative_dict_to_list(observation):
                           'torso', 'pros_foot_r', 'pros_tibia_r']:
             res += observation[info_type][body_part]
 
-    for body_part in ['calcn_l', 'talus_l', 'tibia_l', 'toes_l',
-                      'femur_l', 'femur_r', 'head', 'pelvis',
-                      'torso', 'pros_foot_r', 'pros_tibia_r']:
-        res += list(map(lambda v: v/1000.0, observation['body_acc_rot'][body_part]))
+    #for body_part in ['calcn_l', 'talus_l', 'tibia_l', 'toes_l',
+    #                  'femur_l', 'femur_r', 'head', 'pelvis',
+    #                  'torso', 'pros_foot_r', 'pros_tibia_r']:
+    #    res += list(map(lambda v: v/1000.0, observation['body_acc_rot'][body_part]))
 
     # ground_pelvis
     res += list(map(operator.sub, observation['joint_pos']['ground_pelvis'][0:3], pelvs['body_pos']))
     res += observation['joint_pos']['ground_pelvis'][3:6]
     res += list(map(operator.sub, observation['joint_vel']['ground_pelvis'][0:3], pelvs['body_vel']))
     res += observation['joint_vel']['ground_pelvis'][3:6]
-    res += list(map(lambda a,b: a/100.0-b, observation['joint_acc']['ground_pelvis'][0:3], pelvs['body_acc']))
-    res += list(map(lambda v: v/1000.0, observation['joint_acc']['ground_pelvis'][3:6]))
+    #res += list(map(lambda a,b: a/100.0-b, observation['joint_acc']['ground_pelvis'][0:3], pelvs['body_acc']))
+    #res += list(map(lambda v: v/1000.0, observation['joint_acc']['ground_pelvis'][3:6]))
 
     # joint
     for info_type in ['joint_pos', 'joint_vel']:
@@ -91,9 +80,9 @@ def relative_dict_to_list(observation):
                       'hip_l', 'hip_r', 'knee_l', 'knee_r']:
             res += observation[info_type][joint]
 
-    for joint in ['ankle_l', 'ankle_r', 'back',
-                  'hip_l', 'hip_r', 'knee_l', 'knee_r']:
-        res += list(map(lambda v: v/1000.0, observation['joint_acc'][joint]))
+    #for joint in ['ankle_l', 'ankle_r', 'back',
+    #              'hip_l', 'hip_r', 'knee_l', 'knee_r']:
+    #    res += list(map(lambda v: v/1000.0, observation['joint_acc'][joint]))
 
     # Muscle Observations
     for muscle in ['abd_l', 'abd_r', 'add_l', 'add_r',
@@ -124,6 +113,8 @@ def main():
     c = penalty(obs)
     obs = relative_dict_to_list(obs)
     print(len(obs))
+    while True:
+        pass
     for _ in range(50):
         act = env.action_space.sample()
         noise_process = exploration_theta*(exploration_mu - noise_process) + exploration_sigma*np.random.randn(action_dim)
