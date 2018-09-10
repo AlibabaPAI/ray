@@ -6,6 +6,7 @@ prosthetics-apex-ddpg:
     checkpoint_freq: 50
     checkpoint_at_end: True
     local_dir: /gruntdata/app_data/jones.wz/rl/nips2018/
+    restore: /gruntdata/app_data/jones.wz/rl/nips2018/prosthetics-apex-ddpg/APEX_DDPG_prosthetics_0_2018-09-09_22-37-42c2hum538/checkpoint-142
     config:
         # problem setting
         clip_rewards: False
