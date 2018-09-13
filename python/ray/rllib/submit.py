@@ -17,7 +17,7 @@ from ray.rllib.models import ModelCatalog
 
 import opensim as osim
 from osim.http.client import Client
-from toy_opensim import penalty, relative_dict_to_list
+from toy_opensim import relative_dict_to_list
 
 
 EXAMPLE_USAGE = """
@@ -95,6 +95,7 @@ def run(args, parser):
     cls = get_agent_class(args.run)
     agent = cls(env=args.env, config=args.config)
     agent.restore(args.checkpoint)
+    policy = agent.local_evaluator.policy_map["default"]
 
 
     print("*************************************")
@@ -103,13 +104,19 @@ def run(args, parser):
     print("Begin submiting")
     # CrowdAI environment
     remote_base = "http://grader.crowdai.org:1729"
-    crowdai_token = "e64471fd2e23a6a236981d69082cb88d"
+    crowdai_token = "23133f3b85be506e07f3f781756e5f3e"
     client = Client(remote_base)
     obs = client.env_create(crowdai_token, env_id='ProstheticsEnv')
     obs = relative_dict_to_list(obs)
 
     while True:
-        act = agent.compute_action(obs)
+        #act = agent.compute_action(obs)
+        act = policy.sess.run(
+            policy.output_actions,
+            feed_dict={
+                policy.cur_observations: [obs],
+                policy.stochastic: False,
+                policy.eps: .0})[0]
         [obs, reward, done, info] = client.env_step(act.tolist(), True)
         obs = relative_dict_to_list(obs)
         print(obs)
@@ -121,6 +128,38 @@ def run(args, parser):
 
     print("Complete interaction")
     client.submit()
+
+
+    # repeat actions as training
+    client = Client(remote_base)
+    obs = client.env_create(crowdai_token, env_id='ProstheticsEnv')
+    obs = relative_dict_to_list(obs)
+    repeat_cnt = 0
+    act = None
+
+    while True:
+        if repeat_cnt == 0:
+            #act = agent.compute_action(obs)
+            act = policy.sess.run(
+                policy.output_actions,
+                feed_dict={
+                    policy.cur_observations: [obs],
+                    policy.stochastic: False,
+                    policy.eps: .0})[0]
+        [obs, reward, done, info] = client.env_step(act.tolist(), True)
+        repeat_cnt = (repeat_cnt + 1) % 4
+        obs = relative_dict_to_list(obs)
+        print(obs)
+        if done:
+            obs = client.env_reset()
+            repeat_cnt = 0
+            if not obs:
+                break
+            obs = relative_dict_to_list(obs)
+
+    print("Complete interaction")
+    client.submit()
+    
     print("done.")
 
 

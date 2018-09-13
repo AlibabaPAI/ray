@@ -17,7 +17,7 @@ from ray.rllib.agents.dqn.common.wrappers import wrap_dqn
 from ray.rllib.models import ModelCatalog
 
 import opensim as osim
-from toy_opensim import penalty, relative_dict_to_list
+from ray.rllib.env.atari_wrappers import wrap_opensim
 
 
 EXAMPLE_USAGE = """
@@ -91,30 +91,31 @@ def run(args, parser):
             parser.error("the following arguments are required: --env")
         args.env = args.config.get("env")
 
-    ray.init()
+    ray.init(redis_address="10.183.28.144:33559")
     cls = get_agent_class(args.run)
     agent = cls(env=args.env, config=args.config)
     agent.restore(args.checkpoint)
+    policy = agent.local_evaluator.policy_map["default"]
 
     env = ProstheticsEnv(False)
-    
+    env = wrap_opensim(env)
 
     for epoch in range(1):
-        obs = env.reset(False)
-        obs = relative_dict_to_list(obs)
+        obs = env.reset()
         done = False
         episode_rwd = .0
-        episode_penalty = .0
+
         while not done:
-            act = agent.compute_action(obs)
-            obs, reward, done, info = env.step(act, False)
-            c = penalty(obs)
-            obs = relative_dict_to_list(obs)
+            act = policy.sess.run(
+                policy.output_actions,
+                feed_dict={
+                    policy.cur_observations: [obs],
+                    policy.stochastic: False,
+                    policy.eps: .0})[0]
+            obs, reward, done, info = env.step(act)
             print(obs)
             episode_rwd += reward
-            episode_penalty += c
         print("episode reward is %.3f" % episode_rwd)
-        print("episode penalty is %.3f" % episode_penalty)
 
     print("done.")
 
