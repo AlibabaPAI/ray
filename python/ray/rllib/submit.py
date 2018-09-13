@@ -110,7 +110,6 @@ def run(args, parser):
     obs = relative_dict_to_list(obs)
 
     while True:
-        #act = agent.compute_action(obs)
         act = policy.sess.run(
             policy.output_actions,
             feed_dict={
@@ -129,8 +128,7 @@ def run(args, parser):
     print("Complete interaction")
     client.submit()
 
-
-    # repeat actions as training
+    # repeat actions
     client = Client(remote_base)
     obs = client.env_create(crowdai_token, env_id='ProstheticsEnv')
     obs = relative_dict_to_list(obs)
@@ -139,7 +137,6 @@ def run(args, parser):
 
     while True:
         if repeat_cnt == 0:
-            #act = agent.compute_action(obs)
             act = policy.sess.run(
                 policy.output_actions,
                 feed_dict={
@@ -159,7 +156,7 @@ def run(args, parser):
 
     print("Complete interaction")
     client.submit()
-    
+
     print("done.")
 
 
