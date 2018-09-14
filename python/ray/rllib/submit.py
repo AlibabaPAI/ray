@@ -91,7 +91,7 @@ def run(args, parser):
             parser.error("the following arguments are required: --env")
         args.env = args.config.get("env")
 
-    ray.init(redis_address="10.183.28.144:6379")
+    ray.init(redis_address="10.183.28.144:52059")
     cls = get_agent_class(args.run)
     agent = cls(env=args.env, config=args.config)
     agent.restore(args.checkpoint)

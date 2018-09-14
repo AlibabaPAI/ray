@@ -197,10 +197,6 @@ class PolicyEvaluator(EvaluatorInterface):
                 if monitor_path:
                     env = _monitor(env, monitor_path)
                 return env
-        elif isinstance(self.env, ProstheticsEnv):
-            print("**************Hacking Opensim for NIPS2018**************")
-            def wrap(env):
-                return wrap_opensim(env)
         else:
 
             def wrap(env):
