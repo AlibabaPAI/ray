@@ -11,7 +11,7 @@ import tensorflow as tf
 import ray
 from ray.rllib.models import ModelCatalog
 from ray.rllib.env.async_vector_env import AsyncVectorEnv
-from ray.rllib.env.atari_wrappers import wrap_deepmind, is_atari, wrap_opensim
+from ray.rllib.env.atari_wrappers import wrap_deepmind, is_atari
 from ray.rllib.env.env_context import EnvContext
 from ray.rllib.env.serving_env import ServingEnv
 from ray.rllib.env.vector_env import VectorEnv
