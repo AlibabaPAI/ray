@@ -132,11 +132,11 @@ class WalkingEnv(gym.Wrapper):
         accept_y1 = -0.52
         accept_y2 = 0.52
         if pelvis_pos_y < accept_y1:
-            pe += (accept_y1-pelvis_pos_y)
+            pe += 2.0*(accept_y1-pelvis_pos_y)
         elif pelvis_pos_y < accept_y2:
             pass
         else:
-            pe += (pelvis_pos_y-accept_y2)
+            pe += 2.0*(pelvis_pos_y-accept_y2)
 
         done = observation['body_pos']['pelvis'][1] <= 0.65
 

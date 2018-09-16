@@ -22,7 +22,7 @@ from ray.rllib.utils.actors import TaskPool, create_colocated
 from ray.rllib.utils.timer import TimerStat
 from ray.rllib.utils.window_stat import WindowStat
 
-EAMPLE_QUEUE_DEPTH = 2
+SAMPLE_QUEUE_DEPTH = 2
 REPLAY_QUEUE_DEPTH = 4
 LEARNER_QUEUE_MAX_SIZE = 16
 
