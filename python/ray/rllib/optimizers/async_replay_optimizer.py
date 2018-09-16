@@ -22,7 +22,7 @@ from ray.rllib.utils.actors import TaskPool, create_colocated
 from ray.rllib.utils.timer import TimerStat
 from ray.rllib.utils.window_stat import WindowStat
 
-SAMPLE_QUEUE_DEPTH = 2
+EAMPLE_QUEUE_DEPTH = 2
 REPLAY_QUEUE_DEPTH = 4
 LEARNER_QUEUE_MAX_SIZE = 16
 
@@ -299,3 +299,19 @@ class AsyncReplayOptimizer(PolicyOptimizer):
         if self.debug:
             stats.update(debug_stats)
         return dict(PolicyOptimizer.stats(self), **stats)
+
+    def save(self, checkpoint_dir=None):
+        checkpoint_path = os.path.join(checkpoint_dir,
+                                       "samples-{}.tsv".format(self.num_steps_sampled))
+        buf = self.replay_actors[0].replay_buffer
+        with open(checkpoint_path, 'w') as ops:
+            for i in range(len(buf._storage)):
+                data = buf._storage[i]
+                obs_t, action, reward, obs_tp1, done = data[0], data[1], data[2], data[3], data[4]
+                obs_t = ','.join([str(v) for v in obs_t])
+                action = ','.join([str(v) for v in action])
+                obs_tp1 = ','.join([str(v) for v in obs_tp1])
+                ops.write("%s\t%s\t%s\t%s\t%s\t%s" % (
+                    obs_t, action, reward, obs_tp1, done, buf._it_sum[i+buf._it_sum._capacity]/buf._alpha))
+
+        return Super(AsyncReplayOptimizer, self).save()

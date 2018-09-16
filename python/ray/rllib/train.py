@@ -4,13 +4,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-# wrapper required
-import operator
-import numpy as np
-from collections import deque
-import gym
-from gym import spaces
-
 import argparse
 import yaml
 
@@ -80,6 +73,13 @@ def create_parser(parser_creator=None):
         "overrides any trial-specific options set via flags above.")
     return parser
 
+
+# wrapper required
+import operator
+import numpy as np
+from collections import deque
+import gym
+from gym import spaces
 
 # register opensim environment
 from osim.env import ProstheticsEnv
@@ -236,14 +236,13 @@ class WalkingEnv(gym.Wrapper):
     def reset(self, **kwargs):
         return self._relative_dict_to_list(self.env.reset(project=False, **kwargs))
 
-
 def wrap_opensim(env):
     env = WalkingEnv(env)
     return env
-
 def env_creator(env_config):
     env = ProstheticsEnv(False)
     return wrap_opensim(env)
+from ray.tune.registry import register_env
 register_env("prosthetics", env_creator)
 
 

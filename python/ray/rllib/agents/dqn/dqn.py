@@ -260,7 +260,7 @@ class DQNAgent(Agent):
         extra_data = [
             self.local_evaluator.save(),
             ray.get([e.save.remote() for e in self.remote_evaluators]),
-            self.optimizer.save(), self.num_target_updates,
+            self.optimizer.save(checkpoint_dir), self.num_target_updates,
             self.last_target_update_ts
         ]
         pickle.dump(extra_data, open(checkpoint_path + ".extra_data", "wb"))
