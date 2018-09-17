@@ -97,6 +97,17 @@ class ReplayActor(object):
         stat.update(self.replay_buffer.stats())
         return stat
 
+    def get_buffer_length(self):
+        return len(self.replay_buffer._storage)
+
+    def get_data(self, start_idx, batch_size):
+        encoded_samples = self.replay_buffer._encode_sample(
+            range(start_idx, start_idx+batch_size))
+
+        priority = self.replay_buffer._it_sum._value[start_idx+self.replay_buffer._it_sum._capacity:start_idx+self.replay_buffer._it_sum._capacity+batch_size]
+        weights = np.array(priority) / self.replay_buffer._alpha
+        return tuple(list(encoded_samples) + [weights])
+
 
 class LearnerThread(threading.Thread):
     """Background thread that updates the local model from replay data.
@@ -303,15 +314,95 @@ class AsyncReplayOptimizer(PolicyOptimizer):
     def save(self, checkpoint_dir=None):
         checkpoint_path = os.path.join(checkpoint_dir,
                                        "samples-{}.tsv".format(self.num_steps_sampled))
-        buf = self.replay_actors[0].replay_buffer
-        with open(checkpoint_path, 'w') as ops:
-            for i in range(len(buf._storage)):
-                data = buf._storage[i]
-                obs_t, action, reward, obs_tp1, done = data[0], data[1], data[2], data[3], data[4]
-                obs_t = ','.join([str(v) for v in obs_t])
-                action = ','.join([str(v) for v in action])
-                obs_tp1 = ','.join([str(v) for v in obs_tp1])
-                ops.write("%s\t%s\t%s\t%s\t%s\t%s" % (
-                    obs_t, action, reward, obs_tp1, done, buf._it_sum[i+buf._it_sum._capacity]/buf._alpha))
 
-        return Super(AsyncReplayOptimizer, self).save()
+        with open(checkpoint_path, 'w') as ops:
+            num_samples = ray.get([ra.get_buffer_length.remote() for ra in self.replay_actors])
+            print("**************************************Replay Actor Status****************************************************")
+            for i, ns in enumerate(num_samples):
+                print("%d: %d" % (i, ns))
+            start_indices = np.zeros(len(num_samples)).astype(np.int32)
+            get_data_tasks = {}
+
+            for ra_idx in range(len(num_samples)):
+                batch_size = min(num_samples[ra_idx]-start_indices[ra_idx], 16)
+
+                if batch_size > 0:
+                    obj_id = self.replay_actors[ra_idx].get_data.remote(
+                        start_indices[ra_idx],
+                        batch_size)
+                    get_data_tasks[obj_id] = ra_idx
+                    start_indices[ra_idx] += batch_size
+
+            while get_data_tasks:
+                pending = list(get_data_tasks)
+                ready, _ = ray.wait(pending, num_returns=len(pending), timeout=10)
+
+                for obj_id in ready:
+                    data = ray.get(obj_id)
+
+                    ra_idx = get_data_tasks.pop(obj_id)
+                    batch_size = min(num_samples[ra_idx]-start_indices[ra_idx], 16)
+                    if batch_size > 0:
+                        new_obj_id = self.replay_actors[ra_idx].get_data.remote(
+                            start_indices[ra_idx],
+                            batch_size)
+                        get_data_tasks[new_obj_id] = ra_idx
+                        start_indices[ra_idx] += batch_size
+                    
+                    obs, actions, rewards, next_obs, terminals, weights = data[0], data[1], data[2], data[3], data[4], data[5]
+                    for j in range(len(obs)):
+                        obs_t = ','.join([str(v) for v in obs[j]])
+                        action = ','.join([str(v) for v in actions[j]])
+                        obs_tp1 = ','.join([str(v) for v in next_obs[j]])
+                        ops.write("%s\t%s\t%s\t%s\t%s\t%s\n" % (
+                            obs_t, action, rewards[j], obs_tp1, terminals[j], weights[j]))
+
+        return super(AsyncReplayOptimizer, self).save()
+
+    def restore(self, data, checkpoint_path=None, sample_file_name=None):
+        if sample_file_name is not None:
+            last_backslash_idx = checkpoint_path.rfind('/')
+            if last_backslash_idx != -1:
+                sample_file_name = checkpoint_path[:last_backslash_idx+1] + sample_file_name
+
+        with open(sample_file_name, 'r') as ips:
+            obs, actions, rewards, next_obs, terminals, weights = [], [], [], [], [], []
+            ra_idx = 0
+
+            for line in ips:
+                cols = line.strip().split('\t')
+                obs_t = np.array([float(v) for v in cols[0].split(',')])
+                obs.append(obs_t)
+                action = np.array([float(v) for v in cols[1].split(',')])
+                actions.append(action)
+                rewards.append(float(cols[2]))
+                obs_tp1 = np.array([float(v) for v in cols[3].split(',')])
+                next_obs.append(obs_tp1)
+                terminals.append(bool(cols[4]))
+                weights.append(float(cols[5]))
+                
+                if len(obs) == 16:
+                    batch = SampleBatch({
+                        "obs": obs,
+                        "actions": actions,
+                        "rewards": rewards,
+                        "new_obs": next_obs,
+                        "dones": terminals,
+                        "weights": weights
+                    })
+                    self.replay_actors[ra_idx].add_batch.remote(batch)
+                    ra_idx = (ra_idx+1) % len(self.replay_actors)
+                    obs, actions, rewards, next_obs, terminals, weights = [], [], [], [], [], []
+
+            if len(obs) != 0:
+                batch = SampleBatch({
+                    "obs": obs,
+                    "actions": actions,
+                    "rewards": rewards,
+                    "new_obs": next_obs,
+                    "dones": terminals,
+                    "weights": weights
+                })
+                self.replay_actors[ra_idx].add_batch.remote(batch)
+
+        super(AsyncReplayOptimizer, self).restore(data)

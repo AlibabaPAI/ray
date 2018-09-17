@@ -2,11 +2,12 @@ prosthetics-apex-ddpg:
     env: prosthetics
     run: APEX_DDPG
     stop:
-        episode_reward_mean: 2400
+        # episode_reward_mean: 2400
+        time_total_s: 900
     checkpoint_freq: 50
     checkpoint_at_end: True
     local_dir: /gruntdata/app_data/jones.wz/rl/nips2018/
-    restore: /gruntdata/app_data/jones.wz/rl/nips2018/ray/python/ray/rllib/ray_on_algo_job_results/checkpoint-368
+    restore: /gruntdata/app_data/jones.wz/rl/nips2018/ray/python/ray/rllib/20180916/checkpoint-450
     config:
         # problem setting
         clip_rewards: False

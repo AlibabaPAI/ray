@@ -117,6 +117,9 @@ DEFAULT_CONFIG = with_common_config({
     "worker_side_prioritization": False,
     # Prevent iterations from going lower than this time span
     "min_iter_time_s": 1,
+
+    # === Contd training ===
+    "sample_file_name": None
 })
 
 
@@ -273,6 +276,9 @@ class DQNAgent(Agent):
             e.restore.remote(d)
             for (d, e) in zip(extra_data[1], self.remote_evaluators)
         ])
-        self.optimizer.restore(extra_data[2])
+        self.optimizer.restore(
+            extra_data[2],
+            checkpoint_path,
+            self.config["sample_file_name"])
         self.num_target_updates = extra_data[3]
         self.last_target_update_ts = extra_data[4]
