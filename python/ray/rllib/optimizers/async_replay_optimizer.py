@@ -365,23 +365,36 @@ class AsyncReplayOptimizer(PolicyOptimizer):
             if last_backslash_idx != -1:
                 sample_file_name = checkpoint_path[:last_backslash_idx+1] + sample_file_name
 
-        with open(sample_file_name, 'r') as ips:
-            obs, actions, rewards, next_obs, terminals, weights = [], [], [], [], [], []
-            ra_idx = 0
+            with open(sample_file_name, 'r') as ips:
+                obs, actions, rewards, next_obs, terminals, weights = [], [], [], [], [], []
+                ra_idx = 0
 
-            for line in ips:
-                cols = line.strip().split('\t')
-                obs_t = np.array([float(v) for v in cols[0].split(',')])
-                obs.append(obs_t)
-                action = np.array([float(v) for v in cols[1].split(',')])
-                actions.append(action)
-                rewards.append(float(cols[2]))
-                obs_tp1 = np.array([float(v) for v in cols[3].split(',')])
-                next_obs.append(obs_tp1)
-                terminals.append(bool(cols[4]))
-                weights.append(float(cols[5]))
-                
-                if len(obs) == 16:
+                for line in ips:
+                    cols = line.strip().split('\t')
+                    obs_t = np.array([float(v) for v in cols[0].split(',')])
+                    obs.append(obs_t)
+                    action = np.array([float(v) for v in cols[1].split(',')])
+                    actions.append(action)
+                    rewards.append(float(cols[2]))
+                    obs_tp1 = np.array([float(v) for v in cols[3].split(',')])
+                    next_obs.append(obs_tp1)
+                    terminals.append(bool(cols[4]))
+                    weights.append(float(cols[5]))
+                    
+                    if len(obs) == 16:
+                        batch = SampleBatch({
+                            "obs": obs,
+                            "actions": actions,
+                            "rewards": rewards,
+                            "new_obs": next_obs,
+                            "dones": terminals,
+                            "weights": weights
+                        })
+                        self.replay_actors[ra_idx].add_batch.remote(batch)
+                        ra_idx = (ra_idx+1) % len(self.replay_actors)
+                        obs, actions, rewards, next_obs, terminals, weights = [], [], [], [], [], []
+
+                if len(obs) != 0:
                     batch = SampleBatch({
                         "obs": obs,
                         "actions": actions,
@@ -391,18 +404,5 @@ class AsyncReplayOptimizer(PolicyOptimizer):
                         "weights": weights
                     })
                     self.replay_actors[ra_idx].add_batch.remote(batch)
-                    ra_idx = (ra_idx+1) % len(self.replay_actors)
-                    obs, actions, rewards, next_obs, terminals, weights = [], [], [], [], [], []
-
-            if len(obs) != 0:
-                batch = SampleBatch({
-                    "obs": obs,
-                    "actions": actions,
-                    "rewards": rewards,
-                    "new_obs": next_obs,
-                    "dones": terminals,
-                    "weights": weights
-                })
-                self.replay_actors[ra_idx].add_batch.remote(batch)
 
         super(AsyncReplayOptimizer, self).restore(data)

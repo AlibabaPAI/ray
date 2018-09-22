@@ -254,7 +254,7 @@ def run(args, parser):
             parser.error("the following arguments are required: --env")
         args.env = args.config.get("env")
 
-    ray.init(redis_address="10.183.28.144:58377")
+    ray.init(redis_address="10.183.28.144:62439")
     cls = get_agent_class(args.run)
     agent = cls(env=args.env, config=args.config)
     agent.restore(args.checkpoint)
@@ -267,7 +267,7 @@ def run(args, parser):
     print("Begin submiting")
     # CrowdAI environment
     remote_base = "http://grader.crowdai.org:1729"
-    crowdai_token = "23133f3b85be506e07f3f781756e5f3e"
+    crowdai_token = "d350fa66b154fecb5fe4cce63b31f3e7"
     client = Client(remote_base)
     obs = client.env_create(crowdai_token, env_id='ProstheticsEnv')
     obs = relative_dict_to_list(obs)
@@ -307,7 +307,7 @@ def run(args, parser):
                     policy.stochastic: False,
                     policy.eps: .0})[0]
         [obs, reward, done, info] = client.env_step(act.tolist(), True)
-        repeat_cnt = (repeat_cnt + 1) % 4
+        repeat_cnt = (repeat_cnt + 1) % 2
         obs = relative_dict_to_list(obs)
         print(obs)
         if done:
