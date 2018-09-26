@@ -6,22 +6,21 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import net.lingala.zip4j.core.ZipFile;
-import org.ray.api.UniqueID;
-import org.ray.core.model.RayParameters;
-import org.ray.core.model.RunMode;
-import org.ray.runner.RunManager;
-import org.ray.runner.worker.DefaultDriver;
-import org.ray.spi.KeyValueStoreLink;
-import org.ray.spi.PathConfig;
-import org.ray.spi.RemoteFunctionManager;
-import org.ray.spi.StateStoreProxy;
-import org.ray.spi.impl.NativeRemoteFunctionManager;
-import org.ray.spi.impl.NonRayletStateStoreProxyImpl;
-import org.ray.spi.impl.RayletStateStoreProxyImpl;
-import org.ray.spi.impl.RedisClient;
-import org.ray.util.FileUtil;
-import org.ray.util.config.ConfigReader;
-import org.ray.util.logger.RayLog;
+import org.ray.api.id.UniqueId;
+import org.ray.runtime.config.PathConfig;
+import org.ray.runtime.config.RayParameters;
+import org.ray.runtime.config.RunMode;
+import org.ray.runtime.functionmanager.NativeRemoteFunctionManager;
+import org.ray.runtime.functionmanager.RemoteFunctionManager;
+import org.ray.runtime.gcs.KeyValueStoreLink;
+import org.ray.runtime.gcs.RedisClient;
+import org.ray.runtime.gcs.StateStoreProxy;
+import org.ray.runtime.gcs.StateStoreProxyImpl;
+import org.ray.runtime.runner.RunManager;
+import org.ray.runtime.runner.worker.DefaultDriver;
+import org.ray.runtime.util.FileUtil;
+import org.ray.runtime.util.config.ConfigReader;
+import org.ray.runtime.util.logger.RayLog;
 
 
 /**
@@ -148,9 +147,7 @@ public class RayCli {
 
     KeyValueStoreLink kvStore = new RedisClient();
     kvStore.setAddr(cmdSubmit.redisAddress);
-    StateStoreProxy stateStoreProxy = params.use_raylet
-            ? new RayletStateStoreProxyImpl(kvStore)
-            : new NonRayletStateStoreProxyImpl(kvStore);
+    StateStoreProxy stateStoreProxy = new StateStoreProxyImpl(kvStore);
     stateStoreProxy.initializeGlobalState();
 
     RemoteFunctionManager functionManager = new NativeRemoteFunctionManager(kvStore);
@@ -162,10 +159,7 @@ public class RayCli {
         cmdSubmit.packageZip.lastIndexOf('/') + 1,
         cmdSubmit.packageZip.lastIndexOf('.'));
 
-    //final RemoteFunctionManager functionManager = RayRuntime
-    //    .getInstance().getRemoteFunctionManager();
-
-    UniqueID resourceId = functionManager.registerResource(zip);
+    UniqueId resourceId = functionManager.registerResource(zip);
 
     // Init RayLog before using it.
     RayLog.init(params.log_dir);
@@ -173,7 +167,7 @@ public class RayCli {
     RayLog.rapp.debug(
         "registerResource " + resourceId + " for package " + packageName + " done");
 
-    UniqueID appId = params.driver_id;
+    UniqueId appId = params.driver_id;
     functionManager.registerApp(appId, resourceId);
     RayLog.rapp.debug("registerApp " + appId + " for resouorce " + resourceId + " done");
   
@@ -206,8 +200,6 @@ public class RayCli {
     RayLog.rapp.debug("Find app class path  " + additionalClassPath);
 
     // Start driver process.
-    //RunManager runManager = new RunManager(params, RayRuntime.getInstance().getPaths(),
-    //  RayRuntime.configReader);
     RunManager runManager = new RunManager(params, paths, config);
     Process proc = runManager.startDriver(
         DefaultDriver.class.getName(),

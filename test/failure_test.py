@@ -35,6 +35,13 @@ def ray_start_regular():
     ray.shutdown()
 
 
+@pytest.fixture
+def shutdown_only():
+    yield None
+    # The code after the yield will run as teardown code.
+    ray.shutdown()
+
+
 def test_failed_task(ray_start_regular):
     @ray.remote
     def throw_exception_fct1():
@@ -206,9 +213,6 @@ def test_failed_actor_init(ray_start_regular):
         def __init__(self):
             raise Exception(error_message1)
 
-        def get_val(self):
-            return 1
-
         def fail_method(self):
             raise Exception(error_message2)
 
@@ -223,7 +227,27 @@ def test_failed_actor_init(ray_start_regular):
     a.fail_method.remote()
     wait_for_errors(ray_constants.TASK_PUSH_ERROR, 2)
     assert len(ray.error_info()) == 2
-    assert error_message2 in ray.error_info()[1]["message"]
+    assert error_message1 in ray.error_info()[1]["message"]
+
+
+def test_failed_actor_method(ray_start_regular):
+    error_message2 = "actor method failed"
+
+    @ray.remote
+    class FailedActor(object):
+        def __init__(self):
+            pass
+
+        def fail_method(self):
+            raise Exception(error_message2)
+
+    a = FailedActor.remote()
+
+    # Make sure that we get errors from a failed method.
+    a.fail_method.remote()
+    wait_for_errors(ray_constants.TASK_PUSH_ERROR, 1)
+    assert len(ray.error_info()) == 1
+    assert error_message2 in ray.error_info()[0]["message"]
 
 
 def test_incorrect_method_calls(ray_start_regular):
@@ -445,7 +469,7 @@ def test_put_error2(ray_start_object_store_memory):
     wait_for_errors(ray_constants.PUT_RECONSTRUCTION_PUSH_ERROR, 1)
 
 
-def test_version_mismatch():
+def test_version_mismatch(shutdown_only):
     ray_version = ray.__version__
     ray.__version__ = "fake ray version"
 
@@ -456,7 +480,26 @@ def test_version_mismatch():
     # Reset the version.
     ray.__version__ = ray_version
 
-    ray.shutdown()
+
+@pytest.mark.skipif(
+    os.environ.get("RAY_USE_XRAY") != "1",
+    reason="This test only works with xray.")
+def test_warning_monitor_died(shutdown_only):
+    ray.init(num_cpus=0)
+
+    time.sleep(1)  # Make sure the monitor has started.
+
+    # Cause the monitor to raise an exception by pushing a malformed message to
+    # Redis. This will probably kill the raylets and the raylet_monitor in
+    # addition to the monitor.
+    fake_id = 20 * b"\x00"
+    malformed_message = "asdf"
+    redis_client = ray.worker.global_state.redis_clients[0]
+    redis_client.execute_command(
+        "RAY.TABLE_ADD", ray.gcs_utils.TablePrefix.HEARTBEAT,
+        ray.gcs_utils.TablePubsub.HEARTBEAT, fake_id, malformed_message)
+
+    wait_for_errors(ray_constants.MONITOR_DIED_ERROR, 1)
 
 
 def test_export_large_objects(ray_start_regular):
@@ -480,3 +523,68 @@ def test_export_large_objects(ray_start_regular):
 
     # Make sure that a warning is generated.
     wait_for_errors(ray_constants.PICKLING_LARGE_OBJECT_PUSH_ERROR, 2)
+
+
+@pytest.mark.skipif(
+    os.environ.get("RAY_USE_XRAY") != "1",
+    reason="This test only works with xray.")
+def test_warning_for_infeasible_tasks(ray_start_regular):
+    # Check that we get warning messages for infeasible tasks.
+
+    @ray.remote(num_gpus=1)
+    def f():
+        pass
+
+    @ray.remote(resources={"Custom": 1})
+    class Foo(object):
+        pass
+
+    # This task is infeasible.
+    f.remote()
+    wait_for_errors(ray_constants.INFEASIBLE_TASK_ERROR, 1)
+
+    # This actor placement task is infeasible.
+    Foo.remote()
+    wait_for_errors(ray_constants.INFEASIBLE_TASK_ERROR, 2)
+
+
+@pytest.fixture
+def ray_start_two_nodes():
+    # Start the Ray processes.
+    ray.worker._init(start_ray_local=True, num_local_schedulers=2, num_cpus=0)
+    yield None
+    # The code after the yield will run as teardown code.
+    ray.shutdown()
+
+
+# Note that this test will take at least 10 seconds because it must wait for
+# the monitor to detect enough missed heartbeats.
+@pytest.mark.skipif(
+    os.environ.get("RAY_USE_XRAY") != "1",
+    reason="This test only works with xray.")
+def test_warning_for_dead_node(ray_start_two_nodes):
+    # Wait for the raylet to appear in the client table.
+    while len(ray.global_state.client_table()) < 2:
+        time.sleep(0.1)
+
+    client_ids = {item["ClientID"] for item in ray.global_state.client_table()}
+
+    # Try to make sure that the monitor has received at least one heartbeat
+    # from the node.
+    time.sleep(0.5)
+
+    # Kill both raylets.
+    ray.services.all_processes[ray.services.PROCESS_TYPE_RAYLET][1].kill()
+    ray.services.all_processes[ray.services.PROCESS_TYPE_RAYLET][0].kill()
+
+    # Check that we get warning messages for both raylets.
+    wait_for_errors(ray_constants.REMOVED_NODE_ERROR, 2, timeout=20)
+
+    # Extract the client IDs from the error messages. This will need to be
+    # changed if the error message changes.
+    warning_client_ids = {
+        item['message'].split(' ')[5]
+        for item in ray.error_info()
+    }
+
+    assert client_ids == warning_client_ids
