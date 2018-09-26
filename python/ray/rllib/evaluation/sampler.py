@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import time
 from collections import defaultdict, namedtuple
 import six.moves.queue as queue
 import threading
@@ -63,9 +64,10 @@ class SyncSampler(object):
 
     def get_metrics(self):
         completed = []
+        now = time.time()
         while True:
             try:
-                completed.append(self.metrics_queue.get_nowait())
+                completed.append((now, self.metrics_queue.get_nowait()))
             except queue.Empty:
                 break
         return completed

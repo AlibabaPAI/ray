@@ -254,7 +254,8 @@ def run(args, parser):
             parser.error("the following arguments are required: --env")
         args.env = args.config.get("env")
 
-    ray.init(redis_address="10.183.28.144:62439")
+    #ray.init(redis_address="10.183.28.144:59505")
+    ray.init()
     cls = get_agent_class(args.run)
     agent = cls(env=args.env, config=args.config)
     agent.restore(args.checkpoint)
@@ -307,7 +308,7 @@ def run(args, parser):
                     policy.stochastic: False,
                     policy.eps: .0})[0]
         [obs, reward, done, info] = client.env_step(act.tolist(), True)
-        repeat_cnt = (repeat_cnt + 1) % 2
+        repeat_cnt = (repeat_cnt + 1) % 3
         obs = relative_dict_to_list(obs)
         print(obs)
         if done:

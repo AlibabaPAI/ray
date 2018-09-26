@@ -8,6 +8,7 @@ import argparse
 import json
 import os
 import pickle
+import time
 
 import gym
 import ray
@@ -77,7 +78,7 @@ from osim.env import ProstheticsEnv
 from ray.tune.registry import register_env
 
 class WalkingEnv(gym.Wrapper):
-    def __init__(self, env, skip=2):
+    def __init__(self, env, skip=3):
         """
         add 1 to original reward for each timestep except for the terminal one
         repeat an action for 4 timesteps
@@ -273,16 +274,18 @@ def run(args, parser):
             parser.error("the following arguments are required: --env")
         args.env = args.config.get("env")
 
-    ray.init(redis_address="10.183.28.144:62439")
+    #ray.init(redis_address="10.183.28.144:62439")
+    ray.init()
     cls = get_agent_class(args.run)
     agent = cls(env=args.env, config=args.config)
     agent.restore(args.checkpoint)
     policy = agent.local_evaluator.policy_map["default"]
 
     env = env_creator("prosthetics")
+    start_time = time.time()
+    ts_cnt = 0
 
-    ops = open("actions.txt", 'w')
-    for epoch in range(1):
+    for epoch in range(10):
         obs = env.reset()
         done = False
         episode_rwd = .0
@@ -294,13 +297,17 @@ def run(args, parser):
                     policy.cur_observations: [obs],
                     policy.stochastic: False,
                     policy.eps: .0})[0]
-            ops.write(','.join(str(v) for v in act))
-            ops.write('\n')
             obs, reward, done, info = env.step(act)
+            ts_cnt += 1
             episode_rwd += reward
+            if ts_cnt == 100:
+                break
+        if ts_cnt == 100:
+            break
+
         print("episode reward is %.3f" % episode_rwd)
 
-    ops.close()
+    print("consumed {} secs".format(time.time()-start_time))
     print("done.")
 
 

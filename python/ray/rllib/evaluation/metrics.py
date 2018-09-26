@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import time
 import numpy as np
 import collections
 
@@ -19,10 +20,15 @@ def collect_metrics(local_evaluator, remote_evaluators=[]):
 def collect_episodes(local_evaluator, remote_evaluators=[]):
     """Gathers new episodes metrics tuples from the given evaluators."""
 
+    now = time.asctime(time.localtime(time.time()))
+    print(now, "to get remote_evaluators' metrics")
     metric_lists = ray.get([
         a.apply.remote(lambda ev: ev.sampler.get_metrics())
         for a in remote_evaluators
     ])
+    now = time.asctime(time.localtime(time.time()))
+    print(now, "got remote_evaluators' metrics")
+
     metric_lists.append(local_evaluator.sampler.get_metrics())
     episodes = []
     for metrics in metric_lists:
@@ -36,12 +42,17 @@ def summarize_episodes(episodes):
     episode_rewards = []
     episode_lengths = []
     policy_rewards = collections.defaultdict(list)
-    for episode in episodes:
+    mmts = []
+    for mmt, episode in episodes:
+        mmts.append(mmt)
         episode_lengths.append(episode.episode_length)
         episode_rewards.append(episode.episode_reward)
         for (_, policy_id), reward in episode.agent_rewards.items():
             if policy_id != DEFAULT_POLICY_ID:
                 policy_rewards[policy_id].append(reward)
+    latest = np.max(mmts)
+    print("The last get_metrics task happened at", time.asctime(time.localtime(latest)))
+
     if episode_rewards:
         min_reward = min(episode_rewards)
         max_reward = max(episode_rewards)
